@@ -1,8 +1,5 @@
 from typing import (
-    Union,
-    Any,
-    Dict,
-    List
+    Union
 )
 from math import ceil
 
@@ -18,8 +15,3 @@ def list_division(_list: Union[list, str], divider: int) -> list:
         else:
             result.append(_list[i * divider:(i + 1) * divider])
     return result
-
-def add_values(model: object, data: Dict[str, Any], exc: List[str] = []):
-    for key, value in data.items():
-        if (not hasattr(model, key)) and (key not in exc):
-            setattr(model, key, value)

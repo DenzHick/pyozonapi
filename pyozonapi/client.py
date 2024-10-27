@@ -1,14 +1,19 @@
 import asyncio
 from typing import (
     Literal,
-    Optional
+    Optional,
+    Dict,
+    Callable
 )
 from aiohttp import ClientSession
+from aiohttp import web
 
 from .modules.stocks import Stocks
 from .modules.product import Product
 from .modules.posting import Posting
 from .exceptions.api import ApiError
+from .models.push import OzonPushEvent
+
 
 class OzonClient:
     """
@@ -26,18 +31,19 @@ class OzonClient:
             base_url: str = "https://api-seller.ozon.ru/",
             locale: Literal["RU", "EN"] = "RU"
     ):
-        self.api_key = api_key
-        self.client_id = client_id
-        self.headers = {
+        self.api_key: str = api_key
+        self.client_id: str = client_id
+        self.headers: Dict[str, str] = {
             "Client-Id": self.client_id,
             "Api-Key": self.api_key
         }
-        self.base_url = base_url
-        self.locale = locale
-        self.stocks = Stocks(self)
-        self.product = Product(self)
+        self.base_url: str = base_url
+        self.locale: Literal["RU", "EN"] = locale
+        self.stocks: Stocks = Stocks(self)
+        self.product: Product = Product(self)
         self.warehouse = None
-        self.posting = Posting(self)
+        self.posting: Posting = Posting(self)
+        self.push = None # Включение, выключение, изменение push-уведомлений. Спросить как это сделать у ChatGPT
 
     async def fetch(
             self,
@@ -67,3 +73,68 @@ class OzonClient:
                 raise ApiError(response.status, data, self.locale)
 
             return data
+
+
+class OzonPushClient:
+
+    def __init__(
+            self,
+            host: str = '0.0.0.0',
+            port: int  = 8080,
+            webhook_path: str = "/ozon/push"
+    ):
+        """
+        :param host: Хост, на котором будет запущен сервер.
+        :param port: Порт, на котором будет запущен сервер.
+        :param webhook_path: Путь, на который будут приходить уведомления.
+        """
+        self.host: str = host
+        self.port: int = port
+        self.webhook_path: str = webhook_path
+        self.app = web.Application()
+        self.app.router.add_post(self.webhook_path, self._handle_push)
+        self._on_event: Optional[Callable[[OzonPushEvent], None]] = None
+
+    def on_event(self, callback: Callable[[OzonPushEvent], None]):
+        """
+        Устанавливает функцию обратного вызова для обработки событий.
+        """
+        self._on_event = callback
+
+    async def _handle_push(self, request: web.Request):
+        """
+        Обрабатывает входящие push-уведомления от Ozon Seller API.
+        """
+        try:
+            data = await request.json()
+            event = OzonPushEvent(**data)
+
+            if self._on_event:
+                await self._on_event(event)
+
+            return web.Response(body={"result": True}, status=200)
+        except Exception:
+            return web.Response(body={
+                "error": {
+                    "code": "ERROR_UNKNOWN",
+                    "message": "ошибка",
+                    "details": None
+                }
+            }, status=400)
+
+    async def start(self):
+        """
+        Запускает сервер для приема уведомлений.
+        """
+        runner = web.AppRunner(self.app)
+        await runner.setup()
+        site = web.TCPSite(runner, self.host, self.port)
+        await site.start()
+        print(f"Server started at http://{self.host}:{self.port}{self.webhook_path}")
+
+    async def stop(self):
+        """
+        Останавливает сервер.
+        """
+        await self.app.shutdown()
+        await self.app.cleanup()

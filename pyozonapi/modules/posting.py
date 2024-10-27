@@ -75,4 +75,4 @@ class Posting:
             if (body["limit"] < MAX_LIMIT) or (data["result"]["count"] < body["limit"]) or (len(postings) >= limit):
                 break
 
-        return PostingUnfulfilledResponse(postings, self._client.locale)
+        return PostingUnfulfilledResponse.from_response(postings)

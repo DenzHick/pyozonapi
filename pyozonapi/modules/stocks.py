@@ -65,7 +65,7 @@ class Stocks:
 
             last_id = data["result"]["last_id"]
 
-        return StocksResponse(stocks, self._client.locale)
+        return StocksResponse.from_response(stocks)
 
     async def get_fbs(self, product_info: ProductInfoResponse, wait: bool = True) -> StocksResponseFBS:
         """
@@ -99,7 +99,7 @@ class Stocks:
 
             stocks.extend(changed_data)
 
-        return StocksResponseFBS(stocks, self._client.locale)
+        return StocksResponseFBS.from_response(stocks)
 
     async def update(self, update_params: List[StocksUpdateParams], wait: bool = True) -> StocksUpdateResponse:
         """
@@ -123,4 +123,4 @@ class Stocks:
 
             updates.extend(data["result"])
 
-        return StocksUpdateResponse(updates, self._client.locale)
+        return StocksUpdateResponse.from_response(updates)

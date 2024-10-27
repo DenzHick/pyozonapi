@@ -68,7 +68,7 @@ class Product:
 
             last_id = data["result"]["last_id"]
 
-        return ProductListResponse(products, self._client.locale)
+        return ProductListResponse.from_response(products)
 
     async def get_info(self, product_list: ProductListResponse, wait: bool = True) -> ProductInfoResponse:
         """
@@ -96,4 +96,4 @@ class Product:
 
             products.extend(data["result"]["items"])
 
-        return ProductInfoResponse(products, self._client.locale)
+        return ProductInfoResponse.from_response(products)
