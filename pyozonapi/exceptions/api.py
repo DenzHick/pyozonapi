@@ -1,10 +1,11 @@
 from typing import (
-    Literal
+    Literal,
+    Dict
 )
 
 class ApiError(Exception):
 
-    messages = {
+    messages: Dict[str, Dict[str, str]] = {
         "": ""
     }
 

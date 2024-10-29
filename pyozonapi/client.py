@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from typing import (
     Literal,
     Optional,
@@ -12,7 +13,12 @@ from .modules.stocks import Stocks
 from .modules.product import Product
 from .modules.posting import Posting
 from .exceptions.api import ApiError
-from .models.push import OzonPushEvent
+from .models.push import (
+    OzonPushEvent,
+    OzonPushNewPosting,
+    OzonPushPostingCancelled,
+    OzonPushStateChanged,
+)
 
 
 class OzonClient:
@@ -29,7 +35,8 @@ class OzonClient:
             api_key: str,
             client_id: str,
             base_url: str = "https://api-seller.ozon.ru/",
-            locale: Literal["RU", "EN"] = "RU"
+            locale: Literal["RU", "EN"] = "RU",
+            ttl: Optional[int] = None
     ):
         self.api_key: str = api_key
         self.client_id: str = client_id
@@ -39,11 +46,11 @@ class OzonClient:
         }
         self.base_url: str = base_url
         self.locale: Literal["RU", "EN"] = locale
+        self.ttl: Optional[int] = ttl
         self.stocks: Stocks = Stocks(self)
         self.product: Product = Product(self)
-        self.warehouse = None
         self.posting: Posting = Posting(self)
-        self.push = None # Включение, выключение, изменение push-уведомлений. Спросить как это сделать у ChatGPT
+        self.warehouse = None
 
     async def fetch(
             self,
@@ -81,7 +88,9 @@ class OzonPushClient:
             self,
             host: str = '0.0.0.0',
             port: int  = 8080,
-            webhook_path: str = "/ozon/push"
+            webhook_path: str = "/ozon/push",
+            version: str = '1.0',
+            name: str = 'Bot'
     ):
         """
         :param host: Хост, на котором будет запущен сервер.
@@ -91,6 +100,8 @@ class OzonPushClient:
         self.host: str = host
         self.port: int = port
         self.webhook_path: str = webhook_path
+        self.version: str = version
+        self.name: str = name
         self.app = web.Application()
         self.app.router.add_post(self.webhook_path, self._handle_push)
         self._on_event: Optional[Callable[[OzonPushEvent], None]] = None
@@ -106,14 +117,32 @@ class OzonPushClient:
         Обрабатывает входящие push-уведомления от Ozon Seller API.
         """
         try:
+            date = datetime.now()
             data = await request.json()
             event = OzonPushEvent(**data)
+            if event.message_type == 'TYPE_NEW_POSTING':
+                event = OzonPushNewPosting(**data)
+            if event.message_type == 'TYPE_POSTING_CANCELLED':
+                event = OzonPushPostingCancelled(**data)
+            if event.message_type == 'TYPE_STATE_CHANGED':
+                event = OzonPushStateChanged(**data)
 
             if self._on_event:
                 await self._on_event(event)
 
-            return web.Response(body={"result": True}, status=200)
-        except Exception:
+            body = {
+                'result': True
+            }
+
+            if event.message_type == "TYPE_PING":
+                body = {
+                    "version": self.version,
+                    "name": self.name,
+                    "time": str(date.strftime('%Y-%m-%dT%H:%M:%SZ'))
+                }
+
+            return web.Response(body=body, status=200)
+        except:
             return web.Response(body={
                 "error": {
                     "code": "ERROR_UNKNOWN",

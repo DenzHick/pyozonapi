@@ -18,6 +18,7 @@ from ..models.product import (
 
 from ..types import Info_Statuses
 from ..modules.tools import list_division
+from ..modules.tools import ttl_cache
 
 class Product:
     """
@@ -26,6 +27,7 @@ class Product:
     def __init__(self, client: OzonClient):
         self._client = client
 
+    @ttl_cache
     async def get_list(
             self,
             status: Info_Statuses = "ALL",
@@ -70,6 +72,7 @@ class Product:
 
         return ProductListResponse.from_response(products)
 
+    @ttl_cache
     async def get_info(self, product_list: ProductListResponse, wait: bool = True) -> ProductInfoResponse:
         """
         Возвращает список товаров.

@@ -19,6 +19,8 @@ from ..models.product import (
     ProductInfoResponse
 )
 
+from ..modules.tools import ttl_cache
+
 from ..exceptions.params import (
     ParamLimitError
 )
@@ -31,6 +33,7 @@ class Stocks:
     def __init__(self, client: OzonClient):
         self._client = client
 
+    @ttl_cache
     async def get(self, limit: Optional[int] = None, wait: bool = True) -> StocksResponse:
         """
         Возвращает информацию о количестве товаров на складах FBS и FBO.
@@ -67,6 +70,7 @@ class Stocks:
 
         return StocksResponse.from_response(stocks)
 
+    @ttl_cache
     async def get_fbs(self, product_info: ProductInfoResponse, wait: bool = True) -> StocksResponseFBS:
         """
         Возвращает информацию о количестве товаров на каждом складе FBS.
