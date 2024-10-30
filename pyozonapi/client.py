@@ -13,13 +13,15 @@ from .modules.stocks import Stocks
 from .modules.product import Product
 from .modules.posting import Posting
 from .exceptions.api import ApiError
+from .models.base import BasePushEvent
 from .models.push import (
-    OzonPushEvent,
-    OzonPushNewPosting,
-    OzonPushPostingCancelled,
-    OzonPushStateChanged,
+    PushNewPosting,
+    PushPostingCancelled,
+    PushStateChanged,
 )
-
+# Провести тесты всех функций, пуш-уведомлений и кэша.
+# В случае нахождения ошибки - исправить. Коммитнуть исправления.
+# Добавить __init__. И привести библиотеку к общему виду
 
 class OzonClient:
     """
@@ -104,9 +106,9 @@ class OzonPushClient:
         self.name: str = name
         self.app = web.Application()
         self.app.router.add_post(self.webhook_path, self._handle_push)
-        self._on_event: Optional[Callable[[OzonPushEvent], None]] = None
+        self._on_event: Optional[Callable[[BasePushEvent], None]] = None
 
-    def on_event(self, callback: Callable[[OzonPushEvent], None]):
+    def on_event(self, callback: Callable[[BasePushEvent], None]):
         """
         Устанавливает функцию обратного вызова для обработки событий.
         """
@@ -119,13 +121,13 @@ class OzonPushClient:
         try:
             date = datetime.now()
             data = await request.json()
-            event = OzonPushEvent(**data)
+            event = BasePushEvent(**data)
             if event.message_type == 'TYPE_NEW_POSTING':
-                event = OzonPushNewPosting(**data)
+                event = PushNewPosting(**data)
             if event.message_type == 'TYPE_POSTING_CANCELLED':
-                event = OzonPushPostingCancelled(**data)
+                event = PushPostingCancelled(**data)
             if event.message_type == 'TYPE_STATE_CHANGED':
-                event = OzonPushStateChanged(**data)
+                event = PushStateChanged(**data)
 
             if self._on_event:
                 await self._on_event(event)

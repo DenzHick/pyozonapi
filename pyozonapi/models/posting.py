@@ -4,35 +4,11 @@ from typing import (
     Dict,
     Any
 )
-
+from .base import BaseResponse
 from ..types import (
     Posting_Statuses,
     Posting_SubStatuses
 )
-
-
-class PostingUnfulfilledOffer(BaseModel):
-
-    id: str = Field(alias='offer_id')
-    sku: int
-    quantity: int
-    name: str
-
-    class Config:
-        extra = 'allow'
-
-
-class PostingUnfulfilledOrder(BaseModel):
-
-    id: int = Field(alias='order_id')
-    number: str = Field(alias='order_number')
-    offers: List[PostingUnfulfilledOffer] = Field(alias='products')
-    posting_number: str
-    status: Posting_Statuses
-    substatus: Posting_SubStatuses
-
-    class Config:
-        extra = 'allow'
 
 
 class PostingUnfulfilledResponse(BaseModel):
@@ -43,9 +19,25 @@ class PostingUnfulfilledResponse(BaseModel):
     :param locale: "RU" | "EN" - Язык ответов.
     """
 
-    orders: List[PostingUnfulfilledOrder]
+    class Order(BaseResponse):
+
+        class Offer(BaseResponse):
+
+            id: str = Field(alias='offer_id')
+            sku: int
+            quantity: int
+            name: str
+
+        id: int = Field(alias='order_id')
+        number: str = Field(alias='order_number')
+        offers: List[Offer] = Field(alias='products')
+        posting_number: str
+        status: Posting_Statuses
+        substatus: Posting_SubStatuses
+
+    orders: List[Order]
 
     @classmethod
     def from_response(cls, response: List[Dict[str, Any]]) -> "PostingUnfulfilledResponse":
-        orders = [PostingUnfulfilledOrder(**order) for order in response]
+        orders = [cls.Order(**order) for order in response]
         return cls(orders=orders)

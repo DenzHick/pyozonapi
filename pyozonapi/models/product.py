@@ -4,15 +4,7 @@ from typing import (
     Dict,
     Any
 )
-
-
-class ProductListOffer(BaseModel):
-
-    id: str = Field(alias='offer_id')
-    product_id: int
-
-    class Config:
-        extra = 'allow'
+from .base import BaseResponse
 
 
 class ProductListResponse(BaseModel):
@@ -23,49 +15,17 @@ class ProductListResponse(BaseModel):
     :param locale: "RU" | "EN" - Язык ответов.
     """
 
-    offers: List[ProductListOffer]
+    class Offer(BaseResponse):
+
+        id: str = Field(alias='offer_id')
+        product_id: int
+
+    offers: List[Offer]
 
     @classmethod
     def from_response(cls, response: List[Dict[str, Any]]) -> "ProductListResponse":
-        offers = [ProductListOffer(**offer) for offer in response]
+        offers = [cls.Offer(**offer) for offer in response]
         return cls(offers=offers)
-
-
-class ProductStocks(BaseModel):
-
-    quantity: int = Field(alias='present')
-    reserve: int = Field(alias='reserved')
-    coming: int
-
-    class Config:
-        extra = 'allow'
-
-
-class ProductVisibilityDetails(BaseModel):
-
-    active_product: bool
-    has_price: bool
-    has_stock: bool
-    reasons: dict
-
-    class Config:
-        extra = 'allow'
-
-
-class ProductInfoOffer(BaseModel):
-
-    id: str = Field(alias='offer_id')
-    product_id: int
-    sku: int
-    name: str
-    is_archived: bool
-    visible: bool
-    stocks: ProductStocks
-    discounted_stocks: ProductStocks
-    visibility_details: ProductVisibilityDetails
-
-    class Config:
-        extra = 'allow'
 
 
 class ProductInfoResponse(BaseModel):
@@ -76,9 +36,34 @@ class ProductInfoResponse(BaseModel):
     :param locale: "RU" | "EN" - Язык ответов.
     """
 
-    offers: List[ProductInfoOffer]
+    class Offer(BaseResponse):
+
+        class Stocks(BaseResponse):
+
+            quantity: int = Field(alias='present')
+            reserve: int = Field(alias='reserved')
+            coming: int
+
+        class VisibilityDetails(BaseResponse):
+
+            active_product: bool
+            has_price: bool
+            has_stock: bool
+            reasons: dict
+
+        id: str = Field(alias='offer_id')
+        product_id: int
+        sku: int
+        name: str
+        is_archived: bool
+        visible: bool
+        stocks: Stocks
+        discounted_stocks: Stocks
+        visibility_details: VisibilityDetails
+
+    offers: List[Offer]
 
     @classmethod
     def from_response(cls, response: List[Dict[str, Any]]) -> "ProductInfoResponse":
-        offers = [ProductInfoOffer(**offer) for offer in response]
+        offers = [cls.Offer(**offer) for offer in response]
         return cls(offers=offers)

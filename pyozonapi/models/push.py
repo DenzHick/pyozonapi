@@ -1,32 +1,26 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 from typing import (
     Literal,
     List
 )
+from .base import (
+    BaseResponse,
+    BasePushEvent
+)
 from datetime import datetime
 
-class OzonPushEvent(BaseModel):
-    """
-    Модель push-уведомления от Ozon Seller API.
-    """
-    message_type: str
 
-    class Config:
-        extra = 'allow'
+class PushProduct(BaseResponse):
 
-
-class OzonPushProduct(BaseModel):
     sku: int
     quantity: int
 
-    class Config:
-        extra = 'allow'
 
+class PushNewPosting(BasePushEvent):
 
-class OzonPushNewPosting(OzonPushEvent):
     message_type: Literal["TYPE_NEW_POSTING"]
     posting_number: str
-    products: List[OzonPushProduct]
+    products: List[PushProduct]
     in_process_at: datetime
     warehouse_id: int
     seller_id: int
@@ -38,26 +32,21 @@ class OzonPushNewPosting(OzonPushEvent):
             return datetime.fromisoformat(value)
         return value
 
-    class Config:
-        extra = 'allow'
 
+class PushPostingCancelled(BasePushEvent):
 
-class OzonPushPostingCancelledReason(BaseModel):
-    id: int
-    message: str
+    class Reason(BaseResponse):
 
-    class Config:
-        extra = 'allow'
+        id: int
+        message: str
 
-
-class OzonPushPostingCancelled(OzonPushEvent):
     message_type: Literal["TYPE_POSTING_CANCELLED"]
     posting_number: str
-    products: List[OzonPushProduct]
+    products: List[PushProduct]
     old_state: str
     new_state: str
     changed_state_date: datetime
-    reason: OzonPushPostingCancelledReason
+    reason: Reason
     warehouse_id: int
     seller_id: int
 
@@ -68,11 +57,9 @@ class OzonPushPostingCancelled(OzonPushEvent):
             return datetime.fromisoformat(value)
         return value
 
-    class Config:
-        extra = 'allow'
 
+class PushStateChanged(BasePushEvent):
 
-class OzonPushStateChanged(OzonPushEvent):
     message_type: Literal["TYPE_STATE_CHANGED"]
     posting_number: str
     new_state: str
@@ -86,6 +73,3 @@ class OzonPushStateChanged(OzonPushEvent):
             value = value.replace('Z', '+00:00')
             return datetime.fromisoformat(value)
         return value
-
-    class Config:
-        extra = 'allow'
